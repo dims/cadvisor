@@ -23,7 +23,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.2-0.20170720062807-ae69057f2299 // indirect
 	github.com/dims/mobyutils v0.0.0-20200117154529-2fd3a5d42678
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
+	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0 // indirect
 	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.4.0
@@ -84,5 +84,5 @@ require (
 	google.golang.org/grpc v1.26.0
 	gopkg.in/olivere/elastic.v2 v2.0.12
 	k8s.io/klog v0.3.0
-	k8s.io/utils v0.0.0-20190712204705-3dccf664f023
+	k8s.io/utils v0.0.0-20200117235808-5f6fbceb4c31
 )
