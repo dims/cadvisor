@@ -26,7 +26,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/cadvisor/container/docker"
+	//"github.com/google/cadvisor/container/docker"
 	"github.com/google/cadvisor/manager"
 	"github.com/google/cadvisor/utils"
 
@@ -204,13 +204,15 @@ func validateCgroups() (string, string) {
 }
 
 func validateDockerInfo() (string, string) {
-	info, err := docker.ValidateInfo()
-	if err != nil {
-		return Unsupported, fmt.Sprintf("Docker setup is invalid: %v", err)
-	}
-
-	desc := fmt.Sprintf("Storage driver is %s.\n", info.Driver)
-	return Recommended, desc
+	// FIXME !!!!
+	//info, err := docker.ValidateInfo()
+	//if err != nil {
+	//	return Unsupported, fmt.Sprintf("Docker setup is invalid: %v", err)
+	//}
+	//
+	//desc := fmt.Sprintf("Storage driver is %s.\n", info.Driver)
+	//return Recommended, desc
+	return "", ""
 }
 
 func validateCgroupMounts() (string, string) {
