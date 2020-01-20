@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.26.0
-	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/hcsshim v0.8.7 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/Rican7/retry v0.1.1-0.20160712041035-272ad122d6e5
@@ -14,7 +13,6 @@ require (
 	github.com/abbot/go-http-auth v0.0.0-20140618235127-c0ef4539dfab
 	github.com/aws/aws-sdk-go v1.6.10
 	github.com/beorn7/perks v0.0.0-20150223135152-b965b613227f // indirect
-	github.com/blang/semver v3.1.0+incompatible
 	github.com/checkpoint-restore/go-criu v0.0.0-20190109184317-bdb7599cd87b // indirect
 	github.com/containerd/cgroups v0.0.0-20200108155730-918ed86e29cc // indirect
 	github.com/containerd/containerd v1.3.2
@@ -23,9 +21,10 @@ require (
 	github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c // indirect
 	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
 	github.com/cyphar/filepath-securejoin v0.2.2-0.20170720062807-ae69057f2299 // indirect
+	github.com/dims/mobyutils v0.0.0-20200117154529-2fd3a5d42678
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
-	github.com/docker/go-connections v0.3.0
+	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.4.0
 	github.com/eapache/go-resiliency v1.0.1-0.20160104191539-b86b1ec0dd42 // indirect
@@ -50,7 +49,6 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.0.0-20140723054909-088c856450c0
 	github.com/kr/text v0.0.0-20130911015532-6807e777504f // indirect
-	github.com/mattn/go-shellwords v1.0.4-0.20180201004752-39dbbfa24bbc // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48
 	github.com/mindprince/gonvml v0.0.0-20171110221305-fee913ce8fb2
@@ -59,7 +57,7 @@ require (
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/opencontainers/runc v1.0.0-rc8.0.20190906011214-a6606a7ae9d9
+	github.com/opencontainers/runc v1.0.0-rc9
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/opencontainers/selinux v1.3.1-0.20190929122143-5215b1806f52 // indirect
 	github.com/pborman/uuid v0.0.0-20150824212802-cccd189d45f7 // indirect

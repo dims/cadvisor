@@ -26,7 +26,6 @@ import (
 	"github.com/google/cadvisor/cache/memory"
 	"github.com/google/cadvisor/collector"
 	"github.com/google/cadvisor/container"
-	"github.com/google/cadvisor/container/docker"
 	containertest "github.com/google/cadvisor/container/testing"
 	info "github.com/google/cadvisor/info/v1"
 	itest "github.com/google/cadvisor/info/v1/test"
@@ -71,7 +70,7 @@ func createManagerAndAddContainers(
 		// Add Docker containers under their namespace.
 		if strings.HasPrefix(name, "/docker") {
 			mif.containers[namespacedContainerName{
-				Namespace: docker.DockerNamespace,
+				Namespace: "docker",
 				Name:      strings.TrimPrefix(name, "/docker/"),
 			}] = cont
 		}

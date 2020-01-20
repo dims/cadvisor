@@ -19,10 +19,10 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
 	"time"
 
-	"github.com/google/cadvisor/container/docker"
 	info "github.com/google/cadvisor/info/v1"
 	"github.com/google/cadvisor/manager"
 
@@ -73,7 +73,7 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		for _, cont := range conts {
 			subcontainers = append(subcontainers, link{
 				Text: getContainerDisplayName(cont.ContainerReference),
-				Link: path.Join(rootDir, DockerPage, docker.ContainerNameToDockerId(cont.ContainerReference.Name)),
+				Link: path.Join(rootDir, DockerPage, containerNameToDockerId(cont.ContainerReference.Name)),
 			})
 		}
 
@@ -126,7 +126,7 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		})
 		parentContainers = append(parentContainers, link{
 			Text: displayName,
-			Link: path.Join(rootDir, DockerPage, docker.ContainerNameToDockerId(cont.Name)),
+			Link: path.Join(rootDir, DockerPage, containerNameToDockerId(cont.Name)),
 		})
 
 		// Get the MachineInfo
@@ -159,4 +159,19 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 
 	klog.V(5).Infof("Request took %s", time.Since(start))
 	return
+}
+
+// Regexp that identifies docker cgroups, containers started with
+// --cgroup-parent have another prefix than 'docker'
+var dockerCgroupRegexp = regexp.MustCompile(`([a-z0-9]{64})`)
+
+// Returns the Docker ID from the full container name.
+func containerNameToDockerId(name string) string {
+	id := path.Base(name)
+
+	if matches := dockerCgroupRegexp.FindStringSubmatch(id); matches != nil {
+		return matches[1]
+	}
+
+	return id
 }
