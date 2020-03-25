@@ -55,6 +55,9 @@ while [ "$(curl -Gs http://localhost:8080/healthz)" != "ok" ]; do
   sleep 1
 done
 
+echo ">> docker info"
+docker info || true
+
 echo ">> running integration tests against local cAdvisor"
 ./api.test --vmodule=*=2
 ./healthz.test --vmodule=*=2
