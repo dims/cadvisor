@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 GO_FLAGS=${GO_FLAGS:-"-tags netgo"}    # Extra go flags to use in the build.
 BUILD_USER=${BUILD_USER:-"${USER}@${HOSTNAME}"}

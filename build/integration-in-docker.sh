@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE}")/.." && pwd -P)"
 TMPDIR=$(mktemp -d)
@@ -28,7 +29,7 @@ function delete() {
 }
 trap delete EXIT INT
 
-docker run --rm -it \
+docker run --rm \
   -w /go/src/github.com/google/cadvisor \
   -v ${PWD}:/go/src/github.com/google/cadvisor \
   golang:1.13 \
@@ -42,7 +43,7 @@ if [[ "${OSTYPE}" == "linux"* ]]; then
 fi
 
 mkdir ${TMPDIR}/docker-graph
-docker run --rm -it \
+docker run --rm \
   -w /go/src/github.com/google/cadvisor \
   -v ${ROOT}:/go/src/github.com/google/cadvisor \
   ${EXTRA_DOCKER_OPTS} \
