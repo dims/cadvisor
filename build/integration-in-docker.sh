@@ -33,7 +33,7 @@ docker run --rm \
   -w /go/src/github.com/google/cadvisor \
   -v ${PWD}:/go/src/github.com/google/cadvisor \
   golang:1.13 \
-  bash -c "env GOOS=linux GO_FLAGS='-race' ./build/build.sh amd64 && \
+  bash -c "env GOOS=linux GO_FLAGS='-race' ./build/build.sh && \
     env GOOS=linux go test -c github.com/google/cadvisor/integration/tests/api &&  \
     env GOOS=linux go test -c github.com/google/cadvisor/integration/tests/healthz"
 

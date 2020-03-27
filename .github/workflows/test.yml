@@ -6,6 +6,7 @@ jobs:
       matrix:
         go-versions: [1.13.x, 1.14.x]
         platform: [ubuntu-latest]
+        arch_name: [linux-arm64, linux-amd64]
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 30
     steps:
@@ -26,6 +27,7 @@ jobs:
       matrix:
         go-versions: [1.13.x, 1.14.x]
         platform: [ubuntu-latest]
+        arch_name: [linux-arm64, linux-amd64]
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 30
     steps:
