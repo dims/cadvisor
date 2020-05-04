@@ -101,7 +101,8 @@ jobs:
             software-properties-common \
             lsb-release \
             build-essential \
-            git
+            git \
+            sudo
 
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
             add-apt-repository \
