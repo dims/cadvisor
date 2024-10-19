@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/dims/libcontainer/cgroups"
+	"github.com/dims/libcontainer/cgroups/fs2"
 	"k8s.io/klog/v2"
 
 	"github.com/google/cadvisor/container"
