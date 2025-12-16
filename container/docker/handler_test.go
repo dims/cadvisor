@@ -26,8 +26,8 @@ import (
 	dclient "github.com/docker/docker/client"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/google/cadvisor/fs"
-	info "github.com/google/cadvisor/info/v1"
+	"github.com/google/cadvisor/lite/fs"
+	info "github.com/google/cadvisor/lite/info/v1"
 )
 
 type mockDockerClientForExitCode struct {

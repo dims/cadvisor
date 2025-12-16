@@ -15,7 +15,7 @@
 package test
 
 import (
-	info "github.com/google/cadvisor/info/v1"
+	info "github.com/google/cadvisor/lite/info/v1"
 
 	"github.com/stretchr/testify/mock"
 )

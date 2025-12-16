@@ -23,8 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
-	info "github.com/google/cadvisor/info/v1"
-	"github.com/google/cadvisor/utils/cloudinfo"
+	info "github.com/google/cadvisor/lite/info/v1"
+	"github.com/google/cadvisor/lite/utils/cloudinfo"
 )
 
 const (

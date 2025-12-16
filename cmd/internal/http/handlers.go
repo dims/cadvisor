@@ -23,9 +23,9 @@ import (
 	httpmux "github.com/google/cadvisor/cmd/internal/http/mux"
 	"github.com/google/cadvisor/cmd/internal/pages"
 	"github.com/google/cadvisor/cmd/internal/pages/static"
-	"github.com/google/cadvisor/container"
-	"github.com/google/cadvisor/manager"
-	"github.com/google/cadvisor/metrics"
+	"github.com/google/cadvisor/lite/container"
+	"github.com/google/cadvisor/lite/manager"
+	"github.com/google/cadvisor/lite/metrics"
 	"github.com/google/cadvisor/validate"
 
 	auth "github.com/abbot/go-http-auth"

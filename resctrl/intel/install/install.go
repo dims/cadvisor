@@ -17,7 +17,7 @@ package install
 import (
 	"time"
 
-	"github.com/google/cadvisor/resctrl"
+	"github.com/google/cadvisor/lite/resctrl"
 	"github.com/google/cadvisor/resctrl/intel"
 
 	"k8s.io/klog/v2"

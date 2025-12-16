@@ -29,15 +29,15 @@ import (
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
-	"github.com/google/cadvisor/container"
-	"github.com/google/cadvisor/container/common"
-	"github.com/google/cadvisor/container/containerd"
-	"github.com/google/cadvisor/container/containerd/namespaces"
+	"github.com/google/cadvisor/lite/container"
+	"github.com/google/cadvisor/lite/container/common"
+	"github.com/google/cadvisor/lite/container/containerd"
+	"github.com/google/cadvisor/lite/container/containerd/namespaces"
 	dockerutil "github.com/google/cadvisor/container/docker/utils"
-	containerlibcontainer "github.com/google/cadvisor/container/libcontainer"
-	"github.com/google/cadvisor/devicemapper"
-	"github.com/google/cadvisor/fs"
-	info "github.com/google/cadvisor/info/v1"
+	containerlibcontainer "github.com/google/cadvisor/lite/container/libcontainer"
+	"github.com/google/cadvisor/lite/devicemapper"
+	"github.com/google/cadvisor/lite/fs"
+	info "github.com/google/cadvisor/lite/info/v1"
 	"github.com/google/cadvisor/zfs"
 )
 

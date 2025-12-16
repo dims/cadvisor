@@ -26,8 +26,8 @@ import (
 	dockersystem "github.com/docker/docker/api/types/system"
 
 	"github.com/google/cadvisor/container/docker/utils"
-	v1 "github.com/google/cadvisor/info/v1"
-	"github.com/google/cadvisor/machine"
+	v1 "github.com/google/cadvisor/lite/info/v1"
+	"github.com/google/cadvisor/lite/machine"
 )
 
 var dockerTimeout = 10 * time.Second

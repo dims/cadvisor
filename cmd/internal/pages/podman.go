@@ -23,8 +23,8 @@ import (
 
 	dockerutil "github.com/google/cadvisor/container/docker/utils"
 	"github.com/google/cadvisor/container/podman"
-	info "github.com/google/cadvisor/info/v1"
-	"github.com/google/cadvisor/manager"
+	info "github.com/google/cadvisor/lite/info/v1"
+	"github.com/google/cadvisor/lite/manager"
 
 	"k8s.io/klog/v2"
 )

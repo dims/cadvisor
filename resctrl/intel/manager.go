@@ -23,9 +23,9 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/google/cadvisor/container/raw"
-	"github.com/google/cadvisor/resctrl"
-	"github.com/google/cadvisor/stats"
+	"github.com/google/cadvisor/lite/container/raw"
+	"github.com/google/cadvisor/lite/resctrl"
+	"github.com/google/cadvisor/lite/stats"
 )
 
 type manager struct {

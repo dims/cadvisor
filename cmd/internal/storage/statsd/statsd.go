@@ -18,8 +18,8 @@ import (
 	"strconv"
 
 	client "github.com/google/cadvisor/cmd/internal/storage/statsd/client"
-	info "github.com/google/cadvisor/info/v1"
-	"github.com/google/cadvisor/storage"
+	info "github.com/google/cadvisor/lite/info/v1"
+	"github.com/google/cadvisor/lite/storage"
 )
 
 func init() {

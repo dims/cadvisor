@@ -34,7 +34,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	cadvisorApi "github.com/google/cadvisor/info/v2"
+	cadvisorApi "github.com/google/cadvisor/lite/info/v2"
 )
 
 // must be able to ssh into hosts without password

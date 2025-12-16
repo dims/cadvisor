@@ -27,11 +27,11 @@ import (
 	"syscall"
 
 	cadvisorhttp "github.com/google/cadvisor/cmd/internal/http"
-	"github.com/google/cadvisor/container"
-	"github.com/google/cadvisor/manager"
-	"github.com/google/cadvisor/metrics"
-	"github.com/google/cadvisor/utils/sysfs"
-	"github.com/google/cadvisor/version"
+	"github.com/google/cadvisor/lite/container"
+	"github.com/google/cadvisor/lite/manager"
+	"github.com/google/cadvisor/lite/metrics"
+	"github.com/google/cadvisor/lite/utils/sysfs"
+	"github.com/google/cadvisor/lite/version"
 
 	// Register container providers
 	_ "github.com/google/cadvisor/cmd/internal/container/install"

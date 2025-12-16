@@ -26,8 +26,8 @@ import (
 	"strings"
 
 	"github.com/google/cadvisor/container/docker"
-	"github.com/google/cadvisor/manager"
-	"github.com/google/cadvisor/utils"
+	"github.com/google/cadvisor/lite/manager"
+	"github.com/google/cadvisor/lite/utils"
 
 	"github.com/opencontainers/cgroups"
 )

@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"time"
 
-	info "github.com/google/cadvisor/info/v1"
-	v2 "github.com/google/cadvisor/info/v2"
-	"github.com/google/cadvisor/manager"
+	info "github.com/google/cadvisor/lite/info/v1"
+	v2 "github.com/google/cadvisor/lite/info/v2"
+	"github.com/google/cadvisor/lite/manager"
 
 	"k8s.io/klog/v2"
 )

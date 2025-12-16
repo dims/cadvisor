@@ -24,6 +24,8 @@ test:
 	@# Filter out integration.
 	$(GO) list ./... | grep -vw integration | xargs $(GO_TEST)
 	cd cmd && $(GO_TEST) ./...
+	@echo ">> running lite module tests"
+	cd lite && GOOS=linux $(GO_TEST) ./...
 
 test-with-libpfm: GO_FLAGS=-race -tags libpfm
 test-with-libpfm: test
@@ -59,6 +61,7 @@ test-runner:
 tidy:
 	@$(GO) mod tidy
 	@cd cmd && $(GO) mod tidy
+	@cd lite && $(GO) mod tidy
 
 format:
 	@echo ">> formatting code"
@@ -104,6 +107,7 @@ lint:
 	@echo ">> running golangci-lint using configuration at .golangci.yml"
 	@golangci-lint run
 	@cd cmd && golangci-lint run
+	@cd lite && golangci-lint run
 
 clean:
 	@rm -f *.test cadvisor

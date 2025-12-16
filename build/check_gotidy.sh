@@ -58,3 +58,6 @@ lint_gotidy "."
 
 # Check if go mod tidy changes needed on cmd module
 lint_gotidy "cmd"
+
+# Check if go mod tidy changes needed on lite module
+lint_gotidy "lite"
