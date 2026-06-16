@@ -38,10 +38,6 @@ import (
 	info "github.com/google/cadvisor/info/v1"
 	v2 "github.com/google/cadvisor/info/v2"
 	"github.com/google/cadvisor/machine"
-	"github.com/google/cadvisor/nvm"
-	"github.com/google/cadvisor/perf"
-	"github.com/google/cadvisor/resctrl"
-	"github.com/google/cadvisor/stats"
 	"github.com/google/cadvisor/utils/oomparser"
 	"github.com/google/cadvisor/utils/sysfs"
 	"github.com/google/cadvisor/version"
@@ -217,16 +213,6 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, HousekeepingConfi
 	newManager.machineInfo = *machineInfo
 	klog.V(1).Infof("Machine: %+v", newManager.machineInfo)
 
-	newManager.perfManager, err = perf.NewManager(perfEventsFile, machineInfo.Topology)
-	if err != nil {
-		return nil, err
-	}
-
-	newManager.resctrlManager, err = resctrl.NewManager(resctrlInterval, machineInfo.CPUVendorID, inHostNamespace)
-	if err != nil {
-		klog.V(4).Infof("Cannot gather resctrl metrics: %v", err)
-	}
-
 	versionInfo, err := getVersionInfo()
 	if err != nil {
 		return nil, err
@@ -296,8 +282,6 @@ type manager struct {
 	containerWatchers        []watcher.ContainerWatcher
 	eventsChannel            chan watcher.ContainerEvent
 	collectorHTTPClient      *http.Client
-	perfManager              stats.Manager
-	resctrlManager           resctrl.ResControlManager
 	// List of raw container cgroup path prefix whitelist.
 	rawContainerCgroupPathPrefixWhiteList []string
 	// List of container env prefix whitelist, the matched container envs would be collected into metrics as extra labels.
@@ -389,8 +373,6 @@ func (m *manager) Stop() error {
 		}
 	}
 	m.quitChannels = make([]chan error, 0, 2)
-	nvm.Finalize()
-	perf.Finalize()
 	return nil
 }
 
@@ -952,30 +934,6 @@ func (m *manager) createContainer(containerName string, watchSource watcher.Cont
 	cont, err := newContainerData(containerName, m.memoryCache, handler, logUsage, collectorManager, m.maxHousekeepingInterval, m.allowDynamicHousekeeping, clock.RealClock{})
 	if err != nil {
 		return err
-	}
-
-	if m.includedMetrics.Has(container.PerfMetrics) {
-		perfCgroupPath, err := handler.GetCgroupPath("perf_event")
-		if err != nil {
-			klog.Warningf("Error getting perf_event cgroup path: %q", err)
-		} else {
-			cont.perfCollector, err = m.perfManager.GetCollector(perfCgroupPath)
-			if err != nil {
-				klog.Errorf("Perf event metrics will not be available for container %q: %v", containerName, err)
-			}
-		}
-	}
-
-	if m.includedMetrics.Has(container.ResctrlMetrics) {
-		m.machineMu.Lock()
-		noOfNUMA := len(m.machineInfo.Topology)
-		m.machineMu.Unlock()
-		cont.resctrlCollector, err = m.resctrlManager.GetCollector(containerName, func() ([]string, error) {
-			return cont.getContainerPids(m.inHostNamespace)
-		}, noOfNUMA)
-		if err != nil {
-			klog.V(4).Infof("resctrl metrics will not be available for container %s: %s", cont.info.Name, err)
-		}
 	}
 
 	// Add collectors
