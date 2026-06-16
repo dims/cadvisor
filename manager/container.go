@@ -26,7 +26,6 @@ import (
 	"path"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -310,131 +309,6 @@ func (cd *containerData) getContainerPids(inHostNamespace bool) ([]string, error
 		}
 	}
 	return pids, nil
-}
-
-func (cd *containerData) GetProcessList(cadvisorContainer string, inHostNamespace bool) ([]info.ProcessInfo, error) {
-	format := "user,pid,ppid,stime,pcpu,pmem,rss,vsz,stat,time,comm,psr,cgroup"
-	out, err := cd.getPsOutput(inHostNamespace, format)
-	if err != nil {
-		return nil, err
-	}
-	return cd.parseProcessList(cadvisorContainer, inHostNamespace, out)
-}
-
-func (cd *containerData) parseProcessList(cadvisorContainer string, inHostNamespace bool, out []byte) ([]info.ProcessInfo, error) {
-	rootfs := "/"
-	if !inHostNamespace {
-		rootfs = "/rootfs"
-	}
-	processes := []info.ProcessInfo{}
-	lines := strings.Split(string(out), "\n")
-	for _, line := range lines[1:] {
-		processInfo, err := cd.parsePsLine(line, cadvisorContainer, inHostNamespace)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse line %s: %v", line, err)
-		}
-		if processInfo == nil {
-			continue
-		}
-
-		var fdCount int
-		dirPath := path.Join(rootfs, "/proc", strconv.Itoa(processInfo.Pid), "fd")
-		fds, err := os.ReadDir(dirPath)
-		if err != nil {
-			klog.V(4).Infof("error while listing directory %q to measure fd count: %v", dirPath, err)
-			continue
-		}
-		fdCount = len(fds)
-		processInfo.FdCount = fdCount
-
-		processes = append(processes, *processInfo)
-	}
-	return processes, nil
-}
-
-func (cd *containerData) isRoot() bool {
-	return cd.info.Name == "/"
-}
-
-func (cd *containerData) parsePsLine(line, cadvisorContainer string, inHostNamespace bool) (*info.ProcessInfo, error) {
-	const expectedFields = 13
-	if len(line) == 0 {
-		return nil, nil
-	}
-
-	proc := info.ProcessInfo{}
-	var err error
-
-	fields := strings.Fields(line)
-	if len(fields) < expectedFields {
-		return nil, fmt.Errorf("expected at least %d fields, found %d: output: %q", expectedFields, len(fields), line)
-	}
-	proc.User = fields[0]
-	proc.StartTime = fields[3]
-	proc.Status = fields[8]
-	proc.RunningTime = fields[9]
-
-	proc.Pid, err = strconv.Atoi(fields[1])
-	if err != nil {
-		return nil, fmt.Errorf("invalid pid %q: %v", fields[1], err)
-	}
-	proc.Ppid, err = strconv.Atoi(fields[2])
-	if err != nil {
-		return nil, fmt.Errorf("invalid ppid %q: %v", fields[2], err)
-	}
-
-	percentCPU, err := strconv.ParseFloat(fields[4], 32)
-	if err != nil {
-		return nil, fmt.Errorf("invalid cpu percent %q: %v", fields[4], err)
-	}
-	proc.PercentCpu = float32(percentCPU)
-	percentMem, err := strconv.ParseFloat(fields[5], 32)
-	if err != nil {
-		return nil, fmt.Errorf("invalid memory percent %q: %v", fields[5], err)
-	}
-	proc.PercentMemory = float32(percentMem)
-
-	proc.RSS, err = strconv.ParseUint(fields[6], 0, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid rss %q: %v", fields[6], err)
-	}
-	proc.VirtualSize, err = strconv.ParseUint(fields[7], 0, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid virtual size %q: %v", fields[7], err)
-	}
-	// convert to bytes
-	proc.RSS *= 1024
-	proc.VirtualSize *= 1024
-
-	// According to `man ps`: The following user-defined format specifiers may contain spaces: args, cmd, comm, command,
-	// fname, ucmd, ucomm, lstart, bsdstart, start.
-	// Therefore we need to be able to parse comm that consists of multiple space-separated parts.
-	proc.Cmd = strings.Join(fields[10:len(fields)-2], " ")
-
-	// These are last two parts of the line. We create a subslice of `fields` to handle comm that includes spaces.
-	lastTwoFields := fields[len(fields)-2:]
-	proc.Psr, err = strconv.Atoi(lastTwoFields[0])
-	if err != nil {
-		return nil, fmt.Errorf("invalid psr %q: %v", lastTwoFields[0], err)
-	}
-	proc.CgroupPath = cd.getCgroupPath(lastTwoFields[1])
-
-	// Remove the ps command we just ran from cadvisor container.
-	// Not necessary, but makes the cadvisor page look cleaner.
-	if !inHostNamespace && cadvisorContainer == proc.CgroupPath && proc.Cmd == "ps" {
-		return nil, nil
-	}
-
-	// Do not report processes from other containers when non-root container requested.
-	if !cd.isRoot() && proc.CgroupPath != cd.info.Name {
-		return nil, nil
-	}
-
-	// Remove cgroup information when non-root container requested.
-	if !cd.isRoot() {
-		proc.CgroupPath = ""
-	}
-	return &proc, nil
 }
 
 func newContainerData(containerName string, memoryCache *memory.InMemoryCache, handler container.ContainerHandler, logUsage bool, collectorManager collector.CollectorManager, maxHousekeepingInterval time.Duration, allowDynamicHousekeeping bool, clock clock.Clock) (*containerData, error) {

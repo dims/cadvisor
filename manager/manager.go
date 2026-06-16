@@ -74,22 +74,10 @@ type Manager interface {
 	// Stops the manager.
 	Stop() error
 
-	//  information about a container.
-	GetContainerInfo(containerName string, query *info.ContainerInfoRequest) (*info.ContainerInfo, error)
-
 	// Get V2 information about a container.
 	// Recursive (subcontainer) requests are best-effort, and may return a partial result alongside an
 	// error in the partial failure case.
 	GetContainerInfoV2(containerName string, options info.RequestOptions) (map[string]info.ContainerInfo, error)
-
-	// Get information about all subcontainers of the specified container (includes self).
-	SubcontainersInfo(containerName string, query *info.ContainerInfoRequest) ([]*info.ContainerInfo, error)
-
-	// Gets all the Docker containers. Return is a map from full container name to ContainerInfo.
-	AllDockerContainers(query *info.ContainerInfoRequest) (map[string]info.ContainerInfo, error)
-
-	// Gets information about a specific Docker container. The specified name is within the Docker namespace.
-	DockerContainer(dockerName string, query *info.ContainerInfoRequest) (info.ContainerInfo, error)
 
 	// Gets spec for all containers based on request options.
 	GetContainerSpec(containerName string, options info.RequestOptions) (map[string]info.ContainerSpec, error)
@@ -97,19 +85,11 @@ type Manager interface {
 	// Get info for all requested containers based on the request options.
 	GetRequestedContainersInfo(containerName string, options info.RequestOptions) (map[string]*info.ContainerInfo, error)
 
-	// Returns true if the named container exists.
-	Exists(containerName string) bool
-
 	// Get information about the machine.
 	GetMachineInfo() (*info.MachineInfo, error)
 
 	// Get version information about different components we depend on.
 	GetVersionInfo() (*info.VersionInfo, error)
-
-	// GetFsInfoByFsUUID returns the information of the device having the
-	// specified filesystem uuid. If no such device with the UUID exists, this
-	// function will return the fs.ErrNoSuchDevice error.
-	GetFsInfoByFsUUID(uuid string) (info.FilesystemInfo, error)
 
 	// Get filesystem information for the filesystem that contains the given directory
 	GetDirFsInfo(dir string) (info.FilesystemInfo, error)
@@ -117,16 +97,6 @@ type Manager interface {
 	// Get filesystem information for a given label.
 	// Returns information for all global filesystems if label is empty.
 	GetFsInfo(label string) ([]info.FilesystemInfo, error)
-
-	// Get ps output for a container.
-	GetProcessList(containerName string, options info.RequestOptions) ([]info.ProcessInfo, error)
-
-	// Returns debugging information. Map of lines per category.
-	DebugInfo() map[string][]string
-
-	AllPodmanContainers(c *info.ContainerInfoRequest) (map[string]info.ContainerInfo, error)
-
-	PodmanContainer(containerName string, query *info.ContainerInfoRequest) (info.ContainerInfo, error)
 }
 
 // Housekeeping configuration for the manager
@@ -272,19 +242,6 @@ type manager struct {
 	containerEnvMetadataWhiteList []string
 }
 
-func (m *manager) PodmanContainer(containerName string, query *info.ContainerInfoRequest) (info.ContainerInfo, error) {
-	container, err := m.namespacedContainer(containerName, PodmanNamespace)
-	if err != nil {
-		return info.ContainerInfo{}, err
-	}
-
-	inf, err := m.containerDataToContainerInfo(container, query)
-	if err != nil {
-		return info.ContainerInfo{}, err
-	}
-	return *inf, nil
-}
-
 // Start the container manager.
 func (m *manager) Start() error {
 	m.containerWatchers = container.InitializePlugins(m, m.fsInfo, m.includedMetrics)
@@ -425,15 +382,6 @@ func (m *manager) globalHousekeeping(quit chan error) {
 	}
 }
 
-func (m *manager) getContainerData(containerName string) (*containerData, error) {
-	// Ensure we have the container.
-	cont, ok := m.containers.Load(namespacedContainerName{Name: containerName})
-	if !ok {
-		return nil, fmt.Errorf("unknown container %q", containerName)
-	}
-	return cont, nil
-}
-
 func (m *manager) GetContainerSpec(containerName string, options info.RequestOptions) (map[string]info.ContainerSpec, error) {
 	conts, err := m.getRequestedContainers(containerName, options)
 	if err != nil {
@@ -465,14 +413,6 @@ func (m *manager) getAdjustedSpec(cinfo *containerInfo) info.ContainerSpec {
 		}
 	}
 	return spec
-}
-
-func (m *manager) GetContainerInfo(containerName string, query *info.ContainerInfoRequest) (*info.ContainerInfo, error) {
-	cont, err := m.getContainerData(containerName)
-	if err != nil {
-		return nil, err
-	}
-	return m.containerDataToContainerInfo(cont, query)
 }
 
 func (m *manager) GetContainerInfoV2(containerName string, options info.RequestOptions) (map[string]info.ContainerInfo, error) {
@@ -570,16 +510,6 @@ func (m *manager) getSubcontainers(containerName string) map[string]*containerDa
 	return containersMap
 }
 
-func (m *manager) SubcontainersInfo(containerName string, query *info.ContainerInfoRequest) ([]*info.ContainerInfo, error) {
-	containersMap := m.getSubcontainers(containerName)
-
-	containers := make([]*containerData, 0, len(containersMap))
-	for _, cont := range containersMap {
-		containers = append(containers, cont)
-	}
-	return m.containerDataSliceToContainerInfoSlice(containers, query)
-}
-
 func (m *manager) getAllNamespacedContainers(ns string) map[string]*containerData {
 	containers := make(map[string]*containerData)
 
@@ -594,11 +524,6 @@ func (m *manager) getAllNamespacedContainers(ns string) map[string]*containerDat
 		return true
 	})
 	return containers
-}
-
-func (m *manager) AllDockerContainers(query *info.ContainerInfoRequest) (map[string]info.ContainerInfo, error) {
-	containers := m.getAllNamespacedContainers(DockerNamespace)
-	return m.containersInfo(containers, query)
 }
 
 func (m *manager) namespacedContainer(containerName string, ns string) (*containerData, error) {
@@ -631,39 +556,6 @@ func (m *manager) namespacedContainer(containerName string, ns string) (*contain
 	}
 
 	return cont, nil
-}
-
-func (m *manager) DockerContainer(containerName string, query *info.ContainerInfoRequest) (info.ContainerInfo, error) {
-	container, err := m.namespacedContainer(containerName, DockerNamespace)
-	if err != nil {
-		return info.ContainerInfo{}, err
-	}
-
-	inf, err := m.containerDataToContainerInfo(container, query)
-	if err != nil {
-		return info.ContainerInfo{}, err
-	}
-	return *inf, nil
-}
-
-func (m *manager) containerDataSliceToContainerInfoSlice(containers []*containerData, query *info.ContainerInfoRequest) ([]*info.ContainerInfo, error) {
-	if len(containers) == 0 {
-		return nil, fmt.Errorf("no containers found")
-	}
-
-	// Get the info for each container.
-	output := make([]*info.ContainerInfo, 0, len(containers))
-	for i := range containers {
-		cinfo, err := m.containerDataToContainerInfo(containers[i], query)
-		if err != nil {
-			// Skip containers with errors, we try to degrade gracefully.
-			klog.V(4).Infof("convert container data to container info failed with error %s", err.Error())
-			continue
-		}
-		output = append(output, cinfo)
-	}
-
-	return output, nil
 }
 
 func (m *manager) GetRequestedContainersInfo(containerName string, options info.RequestOptions) (map[string]*info.ContainerInfo, error) {
@@ -776,14 +668,6 @@ func (m *manager) GetDirFsInfo(dir string) (info.FilesystemInfo, error) {
 	return m.getFsInfoByDeviceName(device.Device)
 }
 
-func (m *manager) GetFsInfoByFsUUID(uuid string) (info.FilesystemInfo, error) {
-	device, err := m.fsInfo.GetDeviceInfoByFsUUID(uuid)
-	if err != nil {
-		return info.FilesystemInfo{}, err
-	}
-	return m.getFsInfoByDeviceName(device.Device)
-}
-
 func (m *manager) GetFsInfo(label string) ([]info.FilesystemInfo, error) {
 	var empty time.Time
 	// Get latest data from filesystems hanging off root container.
@@ -843,34 +727,6 @@ func (m *manager) GetVersionInfo() (*info.VersionInfo, error) {
 	// would be helpful so we would be able to return the last known docker version if
 	// docker was down at the time of a query.
 	return getVersionInfo()
-}
-
-func (m *manager) Exists(containerName string) bool {
-	_, ok := m.containers.Load(namespacedContainerName{Name: containerName})
-	return ok
-}
-
-func (m *manager) GetProcessList(containerName string, options info.RequestOptions) ([]info.ProcessInfo, error) {
-	// override recursive. Only support single container listing.
-	options.Recursive = false
-	// override MaxAge.  ProcessList does not require updated stats.
-	options.MaxAge = nil
-	conts, err := m.getRequestedContainers(containerName, options)
-	if err != nil {
-		return nil, err
-	}
-	if len(conts) != 1 {
-		return nil, fmt.Errorf("expected the request to match only one container")
-	}
-	// TODO(rjnagal): handle count? Only if we can do count by type (eg. top 5 cpu users)
-	ps := []info.ProcessInfo{}
-	for _, cont := range conts {
-		ps, err = cont.GetProcessList(m.cadvisorContainer, m.inHostNamespace)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ps, nil
 }
 
 func (m *manager) registerCollectors(collectorConfigs map[string]string, cont *containerData) error {
@@ -1126,38 +982,6 @@ func (m *manager) watchForNewContainers(quit chan error) error {
 	return nil
 }
 
-func (m *manager) DebugInfo() map[string][]string {
-	debugInfo := container.DebugInfo()
-
-	// Get unique containers.
-	conts := make(map[*containerData]struct{})
-	m.containers.Range(func(_ namespacedContainerName, cont *containerData) bool {
-		if cont != nil {
-			conts[cont] = struct{}{}
-		}
-		return true
-	})
-
-	// List containers.
-	lines := make([]string, 0, len(conts))
-	for cont := range conts {
-		lines = append(lines, cont.info.Name)
-		if cont.info.Namespace != "" {
-			lines = append(lines, fmt.Sprintf("\tNamespace: %s", cont.info.Namespace))
-		}
-
-		if len(cont.info.Aliases) != 0 {
-			lines = append(lines, "\tAliases:")
-			for _, alias := range cont.info.Aliases {
-				lines = append(lines, fmt.Sprintf("\t\t%s", alias))
-			}
-		}
-	}
-
-	debugInfo["Managed containers"] = lines
-	return debugInfo
-}
-
 func (m *manager) getFsInfoByDeviceName(deviceName string) (info.FilesystemInfo, error) {
 	mountPoint, err := m.fsInfo.GetMountpointForDevice(deviceName)
 	if err != nil {
@@ -1173,28 +997,6 @@ func (m *manager) getFsInfoByDeviceName(deviceName string) (info.FilesystemInfo,
 		}
 	}
 	return info.FilesystemInfo{}, fmt.Errorf("cannot find filesystem info for device %q", deviceName)
-}
-
-func (m *manager) containersInfo(containers map[string]*containerData, query *info.ContainerInfoRequest) (map[string]info.ContainerInfo, error) {
-	output := make(map[string]info.ContainerInfo, len(containers))
-	for name, cont := range containers {
-		inf, err := m.containerDataToContainerInfo(cont, query)
-		if err != nil {
-			// Ignore the error because of race condition and return best-effort result.
-			if err == memory.ErrDataNotFound {
-				klog.V(4).Infof("Error getting data for container %s because of race condition", name)
-				continue
-			}
-			return nil, err
-		}
-		output[name] = *inf
-	}
-	return output, nil
-}
-
-func (m *manager) AllPodmanContainers(query *info.ContainerInfoRequest) (map[string]info.ContainerInfo, error) {
-	containers := m.getAllNamespacedContainers(PodmanNamespace)
-	return m.containersInfo(containers, query)
 }
 
 func getVersionInfo() (*info.VersionInfo, error) {
