@@ -23,22 +23,18 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/cadvisor/cache/memory"
 	"github.com/google/cadvisor/collector"
 	"github.com/google/cadvisor/container"
 	"github.com/google/cadvisor/container/raw"
-	"github.com/google/cadvisor/events"
 	"github.com/google/cadvisor/fs"
 	info "github.com/google/cadvisor/info/v1"
 	v2 "github.com/google/cadvisor/info/v2"
 	"github.com/google/cadvisor/machine"
-	"github.com/google/cadvisor/utils/oomparser"
 	"github.com/google/cadvisor/utils/sysfs"
 	"github.com/google/cadvisor/version"
 	"github.com/google/cadvisor/watcher"
@@ -124,14 +120,6 @@ type Manager interface {
 	// Get ps output for a container.
 	GetProcessList(containerName string, options v2.RequestOptions) ([]v2.ProcessInfo, error)
 
-	// Get events streamed through passedChannel that fit the request.
-	WatchForEvents(request *events.Request) (*events.EventChannel, error)
-
-	// Get past events that have been detected and that fit the request.
-	GetPastEvents(request *events.Request) ([]*info.Event, error)
-
-	CloseEventChannel(watchID int)
-
 	// Returns debugging information. Map of lines per category.
 	DebugInfo() map[string][]string
 
@@ -216,7 +204,6 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, HousekeepingConfi
 	}
 	klog.V(1).Infof("Version: %+v", *versionInfo)
 
-	newManager.eventHandler = events.NewEventManager(parseEventsStoragePolicy())
 	return newManager, nil
 }
 
@@ -271,7 +258,6 @@ type manager struct {
 	quitChannels             []chan error
 	cadvisorContainer        string
 	inHostNamespace          bool
-	eventHandler             events.EventManager
 	startupTime              time.Time
 	maxHousekeepingInterval  time.Duration
 	allowDynamicHousekeeping bool
@@ -312,12 +298,6 @@ func (m *manager) Start() error {
 		return err
 	}
 	m.containerWatchers = append(m.containerWatchers, rawWatcher)
-
-	// Watch for OOMs.
-	err = m.watchForNewOoms()
-	if err != nil {
-		klog.Warningf("Could not configure a source for OOM detection, disabling OOM events: %v", err)
-	}
 
 	// If there are no factories, don't start any housekeeping and serve the information we do have.
 	if !container.HasFactories() {
@@ -935,25 +915,6 @@ func (m *manager) createContainer(containerName string, watchSource watcher.Cont
 
 	klog.V(3).Infof("Added container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
 
-	contSpec, err := cont.handler.GetSpec()
-	if err != nil {
-		return err
-	}
-
-	contRef, err := cont.handler.ContainerReference()
-	if err != nil {
-		return err
-	}
-
-	newEvent := &info.Event{
-		ContainerName: contRef.Name,
-		Timestamp:     contSpec.CreationTime,
-		EventType:     info.EventContainerCreation,
-	}
-	err = m.eventHandler.AddEvent(newEvent)
-	if err != nil {
-		return err
-	}
 	// Start the container's housekeeping.
 	return cont.Start()
 }
@@ -989,25 +950,6 @@ func (m *manager) destroyContainer(containerName string) error {
 	}
 	klog.V(3).Infof("Destroyed container: %q (aliases: %v, namespace: %q, exit_code: %d)", containerName, cont.info.Aliases, cont.info.Namespace, exitCode)
 
-	contRef, err := cont.handler.ContainerReference()
-	if err != nil {
-		return err
-	}
-
-	newEvent := &info.Event{
-		ContainerName: contRef.Name,
-		Timestamp:     time.Now(),
-		EventType:     info.EventContainerDeletion,
-		EventData: info.EventData{
-			ContainerDeletion: &info.ContainerDeletionEventData{
-				ExitCode: exitCode,
-			},
-		},
-	}
-	err = m.eventHandler.AddEvent(newEvent)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -1143,130 +1085,6 @@ func (m *manager) watchForNewContainers(quit chan error) error {
 		}
 	}()
 	return nil
-}
-
-func (m *manager) watchForNewOoms() error {
-	klog.V(2).Infof("Started watching for new ooms in manager")
-	outStream := make(chan *oomparser.OomInstance, 10)
-	oomLog, err := oomparser.New()
-	if err != nil {
-		return err
-	}
-	go oomLog.StreamOoms(outStream)
-
-	go func() {
-		for oomInstance := range outStream {
-			// Surface OOM and OOM kill events.
-			newEvent := &info.Event{
-				ContainerName: oomInstance.ContainerName,
-				Timestamp:     oomInstance.TimeOfDeath,
-				EventType:     info.EventOom,
-			}
-			err := m.eventHandler.AddEvent(newEvent)
-			if err != nil {
-				klog.Errorf("failed to add OOM event for %q: %v", oomInstance.ContainerName, err)
-			}
-			klog.V(3).Infof("Created an OOM event in container %q at %v", oomInstance.ContainerName, oomInstance.TimeOfDeath)
-
-			newEvent = &info.Event{
-				ContainerName: oomInstance.VictimContainerName,
-				Timestamp:     oomInstance.TimeOfDeath,
-				EventType:     info.EventOomKill,
-				EventData: info.EventData{
-					OomKill: &info.OomKillEventData{
-						Pid:         oomInstance.Pid,
-						ProcessName: oomInstance.ProcessName,
-						Constraint:  oomInstance.Constraint,
-					},
-				},
-			}
-			err = m.eventHandler.AddEvent(newEvent)
-			if err != nil {
-				klog.Errorf("failed to add OOM kill event for %q: %v", oomInstance.ContainerName, err)
-			}
-
-			// Count OOM events for later collection by prometheus
-			request := v2.RequestOptions{
-				IdType: v2.TypeName,
-				Count:  1,
-			}
-			conts, err := m.getRequestedContainers(oomInstance.ContainerName, request)
-			if err != nil {
-				klog.V(2).Infof("failed getting container info for %q: %v", oomInstance.ContainerName, err)
-				continue
-			}
-			if len(conts) != 1 {
-				klog.V(2).Info("Expected the request to match only one container")
-				continue
-			}
-			for _, cont := range conts {
-				atomic.AddUint64(&cont.oomEvents, 1)
-			}
-		}
-	}()
-	return nil
-}
-
-// can be called by the api which will take events returned on the channel
-func (m *manager) WatchForEvents(request *events.Request) (*events.EventChannel, error) {
-	return m.eventHandler.WatchEvents(request)
-}
-
-// can be called by the api which will return all events satisfying the request
-func (m *manager) GetPastEvents(request *events.Request) ([]*info.Event, error) {
-	return m.eventHandler.GetEvents(request)
-}
-
-// called by the api when a client is no longer listening to the channel
-func (m *manager) CloseEventChannel(watchID int) {
-	m.eventHandler.StopWatch(watchID)
-}
-
-// Parses the events StoragePolicy from the flags.
-func parseEventsStoragePolicy() events.StoragePolicy {
-	policy := events.DefaultStoragePolicy()
-
-	// Parse max age.
-	parts := strings.Split(*eventStorageAgeLimit, ",")
-	for _, part := range parts {
-		items := strings.Split(part, "=")
-		if len(items) != 2 {
-			klog.Warningf("Unknown event storage policy %q when parsing max age", part)
-			continue
-		}
-		dur, err := time.ParseDuration(items[1])
-		if err != nil {
-			klog.Warningf("Unable to parse event max age duration %q: %v", items[1], err)
-			continue
-		}
-		if items[0] == "default" {
-			policy.DefaultMaxAge = dur
-			continue
-		}
-		policy.PerTypeMaxAge[info.EventType(items[0])] = dur
-	}
-
-	// Parse max number.
-	parts = strings.Split(*eventStorageEventLimit, ",")
-	for _, part := range parts {
-		items := strings.Split(part, "=")
-		if len(items) != 2 {
-			klog.Warningf("Unknown event storage policy %q when parsing max event limit", part)
-			continue
-		}
-		val, err := strconv.Atoi(items[1])
-		if err != nil {
-			klog.Warningf("Unable to parse integer from %q: %v", items[1], err)
-			continue
-		}
-		if items[0] == "default" {
-			policy.DefaultMaxNumEvents = val
-			continue
-		}
-		policy.PerTypeMaxNumEvents[info.EventType(items[0])] = val
-	}
-
-	return policy
 }
 
 func (m *manager) DebugInfo() map[string][]string {

@@ -1874,17 +1874,6 @@ func NewPrometheusCollector(i infoProvider, f ContainerLabelsFunc, includedMetri
 			},
 		}...)
 	}
-	if includedMetrics.Has(container.OOMMetrics) {
-		c.containerMetrics = append(c.containerMetrics, containerMetric{
-			name:      "container_oom_events_total",
-			help:      "Count of out of memory events observed for the container",
-			valueType: prometheus.CounterValue,
-			getValues: func(s *info.ContainerStats) metricValues {
-				return metricValues{{value: float64(s.OOMEvents), timestamp: s.Timestamp}}
-			},
-		})
-	}
-
 	if includedMetrics.Has(container.PressureMetrics) {
 		c.containerMetrics = append(c.containerMetrics, []containerMetric{
 			{
