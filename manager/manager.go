@@ -25,6 +25,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/cadvisor/cache/memory"
@@ -35,6 +36,7 @@ import (
 	info "github.com/google/cadvisor/info/v1"
 	v2 "github.com/google/cadvisor/info/v2"
 	"github.com/google/cadvisor/machine"
+	"github.com/google/cadvisor/utils/oomparser"
 	"github.com/google/cadvisor/utils/sysfs"
 	"github.com/google/cadvisor/version"
 	"github.com/google/cadvisor/watcher"
@@ -298,6 +300,11 @@ func (m *manager) Start() error {
 		return err
 	}
 	m.containerWatchers = append(m.containerWatchers, rawWatcher)
+
+	// Watch for OOMs.
+	if err := m.watchForNewOoms(); err != nil {
+		klog.Warningf("Could not configure a source for OOM detection, disabling OOM events: %v", err)
+	}
 
 	// If there are no factories, don't start any housekeeping and serve the information we do have.
 	if !container.HasFactories() {
@@ -675,6 +682,32 @@ func (m *manager) GetRequestedContainersInfo(containerName string, options v2.Re
 		containersMap[name] = info
 	}
 	return containersMap, errs.OrNil()
+}
+
+// watchForNewOoms feeds a per-container OOM-kill counter from the kernel log via
+// oomparser. It is an engine-level async router (NOT a per-tick StatsAugmenter):
+// OOM events arrive keyed by container name and are matched to the registry here.
+// No event stream — only the counter that backs container_oom_events_total.
+func (m *manager) watchForNewOoms() error {
+	outStream := make(chan *oomparser.OomInstance, 10)
+	oomLog, err := oomparser.New()
+	if err != nil {
+		return err
+	}
+	go oomLog.StreamOoms(outStream)
+
+	go func() {
+		for oomInstance := range outStream {
+			conts, err := m.getRequestedContainers(oomInstance.ContainerName, v2.RequestOptions{IdType: v2.TypeName, Count: 1})
+			if err != nil || len(conts) != 1 {
+				continue
+			}
+			for _, cont := range conts {
+				atomic.AddUint64(&cont.oomEvents, 1)
+			}
+		}
+	}()
+	return nil
 }
 
 func (m *manager) getRequestedContainers(containerName string, options v2.RequestOptions) (map[string]*containerData, error) {
