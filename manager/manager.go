@@ -97,9 +97,6 @@ type Manager interface {
 	// Gets spec for all containers based on request options.
 	GetContainerSpec(containerName string, options v2.RequestOptions) (map[string]v2.ContainerSpec, error)
 
-	// Gets summary stats for all containers based on request options.
-	GetDerivedStats(containerName string, options v2.RequestOptions) (map[string]v2.DerivedStats, error)
-
 	// Get info for all requested containers based on the request options.
 	GetRequestedContainersInfo(containerName string, options v2.RequestOptions) (map[string]*info.ContainerInfo, error)
 
@@ -449,23 +446,6 @@ func (m *manager) getContainerData(containerName string) (*containerData, error)
 		return nil, fmt.Errorf("unknown container %q", containerName)
 	}
 	return cont, nil
-}
-
-func (m *manager) GetDerivedStats(containerName string, options v2.RequestOptions) (map[string]v2.DerivedStats, error) {
-	conts, err := m.getRequestedContainers(containerName, options)
-	if err != nil {
-		return nil, err
-	}
-	var errs partialFailure
-	stats := make(map[string]v2.DerivedStats)
-	for name, cont := range conts {
-		d, err := cont.DerivedStats()
-		if err != nil {
-			errs.append(name, "DerivedStats", err)
-		}
-		stats[name] = d
-	}
-	return stats, errs.OrNil()
 }
 
 func (m *manager) GetContainerSpec(containerName string, options v2.RequestOptions) (map[string]v2.ContainerSpec, error) {

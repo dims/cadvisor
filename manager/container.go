@@ -38,7 +38,6 @@ import (
 	info "github.com/google/cadvisor/info/v1"
 	v2 "github.com/google/cadvisor/info/v2"
 	"github.com/google/cadvisor/stats"
-	"github.com/google/cadvisor/summary"
 	"github.com/google/cadvisor/utils/cpuload"
 
 	"github.com/docker/go-units"
@@ -89,7 +88,6 @@ type containerData struct {
 	memoryCache              *memory.InMemoryCache
 	lock                     sync.Mutex
 	loadReader               cpuload.CpuLoadReader
-	summaryReader            *summary.StatsSummary
 	loadAvg                  float64 // smoothed load average seen so far.
 	loadDAvg                 float64 // smoothed load.d average seen so far.
 	housekeepingInterval     time.Duration
@@ -221,13 +219,6 @@ func (cd *containerData) GetInfo(shouldUpdateSubcontainers bool) (*containerInfo
 	cInfo.Aliases = cd.info.Aliases
 	cInfo.Namespace = cd.info.Namespace
 	return &cInfo, nil
-}
-
-func (cd *containerData) DerivedStats() (v2.DerivedStats, error) {
-	if cd.summaryReader == nil {
-		return v2.DerivedStats{}, fmt.Errorf("derived stats not enabled for container %q", cd.info.Name)
-	}
-	return cd.summaryReader.DerivedStats()
 }
 
 func (cd *containerData) getCgroupPath(cgroups string) string {
@@ -496,11 +487,6 @@ func newContainerData(containerName string, memoryCache *memory.InMemoryCache, h
 	if err != nil {
 		return nil, err
 	}
-	cont.summaryReader, err = summary.New(cont.info.Spec)
-	if err != nil {
-		cont.summaryReader = nil
-		klog.V(5).Infof("Failed to create summary reader for %q: %v", ref.Name, err)
-	}
 	return cont, nil
 }
 
@@ -706,14 +692,6 @@ func (cd *containerData) updateStats() error {
 			stats.Cpu.LoadDAverage = int32(cd.loadDAvg * 1000)
 		}
 	}
-	if cd.summaryReader != nil {
-		err := cd.summaryReader.AddSample(*stats)
-		if err != nil {
-			// Ignore summary errors for now.
-			klog.V(2).Infof("Failed to add summary stats for %q: %v", cd.info.Name, err)
-		}
-	}
-
 	stats.OOMEvents = atomic.LoadUint64(&cd.oomEvents)
 
 	var customStatsErr error
