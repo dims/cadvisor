@@ -109,50 +109,6 @@ type ContainerSpec struct {
 	Image string `json:"image,omitempty"`
 }
 
-type DeprecatedContainerStats struct {
-	// The time of this stat point.
-	Timestamp time.Time `json:"timestamp"`
-	// CPU statistics
-	HasCpu bool `json:"has_cpu"`
-	// In nanoseconds (aggregated)
-	Cpu v1.CpuStats `json:"cpu,omitempty"`
-	// In nanocores per second (instantaneous)
-	CpuInst *CpuInstStats `json:"cpu_inst,omitempty"`
-	// Disk IO statistics
-	HasDiskIo bool           `json:"has_diskio"`
-	DiskIo    v1.DiskIoStats `json:"diskio,omitempty"`
-	// Memory statistics
-	HasMemory bool           `json:"has_memory"`
-	Memory    v1.MemoryStats `json:"memory,omitempty"`
-	// Hugepage statistics
-	HasHugetlb bool                       `json:"has_hugetlb"`
-	Hugetlb    map[string]v1.HugetlbStats `json:"hugetlb,omitempty"`
-	// Network statistics
-	HasNetwork bool         `json:"has_network"`
-	Network    NetworkStats `json:"network,omitempty"`
-	// Processes statistics
-	HasProcesses bool            `json:"has_processes"`
-	Processes    v1.ProcessStats `json:"processes,omitempty"`
-	// Filesystem statistics
-	HasFilesystem bool         `json:"has_filesystem"`
-	Filesystem    []v1.FsStats `json:"filesystem,omitempty"`
-	// Task load statistics
-	HasLoad bool         `json:"has_load"`
-	Load    v1.LoadStats `json:"load_stats,omitempty"`
-	// Custom Metrics
-	HasCustomMetrics bool                      `json:"has_custom_metrics"`
-	CustomMetrics    map[string][]v1.MetricVal `json:"custom_metrics,omitempty"`
-	// Perf events counters
-	PerfStats []v1.PerfStat `json:"perf_stats,omitempty"`
-	// Statistics originating from perf uncore events.
-	// Applies only for root container.
-	PerfUncoreStats []v1.PerfUncoreStat `json:"perf_uncore_stats,omitempty"`
-	// Referenced memory
-	ReferencedMemory uint64 `json:"referenced_memory,omitempty"`
-	// Resource Control (resctrl) statistics
-	Resctrl v1.ResctrlStats `json:"resctrl,omitempty"`
-}
-
 type ContainerStats struct {
 	// The time of this stat point.
 	Timestamp time.Time `json:"timestamp"`
@@ -188,58 +144,6 @@ type ContainerStats struct {
 	ReferencedMemory uint64 `json:"referenced_memory,omitempty"`
 	// Resource Control (resctrl) statistics
 	Resctrl v1.ResctrlStats `json:"resctrl,omitempty"`
-}
-
-type Percentiles struct {
-	// Indicates whether the stats are present or not.
-	// If true, values below do not have any data.
-	Present bool `json:"present"`
-	// Average over the collected sample.
-	Mean uint64 `json:"mean"`
-	// Standard deviation of the collected sample.
-	Std uint64 `json:"std"`
-	// Max seen over the collected sample.
-	Max uint64 `json:"max"`
-	// 50th percentile over the collected sample.
-	Fifty uint64 `json:"fifty"`
-	// 90th percentile over the collected sample.
-	Ninety uint64 `json:"ninety"`
-	// 95th percentile over the collected sample.
-	NinetyFive uint64 `json:"ninetyfive"`
-	// Number of samples used to calculate these percentiles.
-	Count uint64 `json:"count"`
-}
-
-type Usage struct {
-	// Indicates amount of data available [0-100].
-	// If we have data for half a day, we'll still process DayUsage,
-	// but set PercentComplete to 50.
-	PercentComplete int32 `json:"percent_complete"`
-	// Mean, Max, and 90p cpu rate value in milliCpus/seconds. Converted to milliCpus to avoid floats.
-	Cpu Percentiles `json:"cpu"`
-	// Mean, Max, and 90p memory size in bytes.
-	Memory Percentiles `json:"memory"`
-}
-
-// latest sample collected for a container.
-type InstantUsage struct {
-	// cpu rate in cpu milliseconds/second.
-	Cpu uint64 `json:"cpu"`
-	// Memory usage in bytes.
-	Memory uint64 `json:"memory"`
-}
-
-type DerivedStats struct {
-	// Time of generation of these stats.
-	Timestamp time.Time `json:"timestamp"`
-	// Latest instantaneous sample.
-	LatestUsage InstantUsage `json:"latest_usage"`
-	// Percentiles in last observed minute.
-	MinuteUsage Usage `json:"minute_usage"`
-	// Percentile in last hour.
-	HourUsage Usage `json:"hour_usage"`
-	// Percentile in last day.
-	DayUsage Usage `json:"day_usage"`
 }
 
 type FsInfo struct {

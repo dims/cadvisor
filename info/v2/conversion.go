@@ -16,86 +16,11 @@ package v2
 
 import (
 	"fmt"
-	"time"
 
 	"k8s.io/klog/v2"
 
 	v1 "github.com/google/cadvisor/model"
 )
-
-func machineFsStatsFromV1(fsStats []v1.FsStats) []MachineFsStats {
-	var result []MachineFsStats
-	for i := range fsStats {
-		stat := fsStats[i]
-		readDuration := time.Millisecond * time.Duration(stat.ReadTime)
-		writeDuration := time.Millisecond * time.Duration(stat.WriteTime)
-		ioDuration := time.Millisecond * time.Duration(stat.IoTime)
-		weightedDuration := time.Millisecond * time.Duration(stat.WeightedIoTime)
-		machineFsStat := MachineFsStats{
-			Device:    stat.Device,
-			Type:      stat.Type,
-			Capacity:  &stat.Limit,
-			Usage:     &stat.Usage,
-			Available: &stat.Available,
-			DiskStats: DiskStats{
-				ReadsCompleted:     &stat.ReadsCompleted,
-				ReadsMerged:        &stat.ReadsMerged,
-				SectorsRead:        &stat.SectorsRead,
-				ReadDuration:       &readDuration,
-				WritesCompleted:    &stat.WritesCompleted,
-				WritesMerged:       &stat.WritesMerged,
-				SectorsWritten:     &stat.SectorsWritten,
-				WriteDuration:      &writeDuration,
-				IoInProgress:       &stat.IoInProgress,
-				IoDuration:         &ioDuration,
-				WeightedIoDuration: &weightedDuration,
-			},
-		}
-		if stat.HasInodes {
-			machineFsStat.InodesFree = &stat.InodesFree
-		}
-		result = append(result, machineFsStat)
-	}
-	return result
-}
-
-func MachineStatsFromV1(cont *v1.ContainerInfo) []MachineStats {
-	var stats []MachineStats
-	var last *v1.ContainerStats
-	for i := range cont.Stats {
-		val := cont.Stats[i]
-		stat := MachineStats{
-			Timestamp: val.Timestamp,
-		}
-		if cont.Spec.HasCpu {
-			stat.Cpu = &val.Cpu
-			cpuInst, err := InstCpuStats(last, val)
-			if err != nil {
-				klog.Warningf("Could not get instant cpu stats: %v", err)
-			} else {
-				stat.CpuInst = cpuInst
-			}
-			last = val
-		}
-		if cont.Spec.HasMemory {
-			stat.Memory = &val.Memory
-		}
-		if cont.Spec.HasNetwork {
-			stat.Network = &NetworkStats{
-				// FIXME: Use reflection instead.
-				Tcp:        TcpStat(val.Network.Tcp),
-				Tcp6:       TcpStat(val.Network.Tcp6),
-				Interfaces: val.Network.Interfaces,
-			}
-		}
-		if cont.Spec.HasFilesystem {
-			stat.Filesystem = machineFsStatsFromV1(val.Filesystem)
-		}
-		// TODO(rjnagal): Handle load stats.
-		stats = append(stats, stat)
-	}
-	return stats
-}
 
 func ContainerStatsFromV1(containerName string, spec *v1.ContainerSpec, stats []*v1.ContainerStats) []*ContainerStats {
 	newStats := make([]*ContainerStats, 0, len(stats))
@@ -166,67 +91,6 @@ func ContainerStatsFromV1(containerName string, spec *v1.ContainerSpec, stats []
 		newStats = append(newStats, stat)
 	}
 	return newStats
-}
-
-func DeprecatedStatsFromV1(cont *v1.ContainerInfo) []DeprecatedContainerStats {
-	stats := make([]DeprecatedContainerStats, 0, len(cont.Stats))
-	var last *v1.ContainerStats
-	for _, val := range cont.Stats {
-		stat := DeprecatedContainerStats{
-			Timestamp:        val.Timestamp,
-			HasCpu:           cont.Spec.HasCpu,
-			HasMemory:        cont.Spec.HasMemory,
-			HasHugetlb:       cont.Spec.HasHugetlb,
-			HasNetwork:       cont.Spec.HasNetwork,
-			HasFilesystem:    cont.Spec.HasFilesystem,
-			HasDiskIo:        cont.Spec.HasDiskIo,
-			HasCustomMetrics: cont.Spec.HasCustomMetrics,
-			ReferencedMemory: val.ReferencedMemory,
-		}
-		if stat.HasCpu {
-			stat.Cpu = val.Cpu
-			cpuInst, err := InstCpuStats(last, val)
-			if err != nil {
-				klog.Warningf("Could not get instant cpu stats: %v", err)
-			} else {
-				stat.CpuInst = cpuInst
-			}
-			last = val
-		}
-		if stat.HasMemory {
-			stat.Memory = val.Memory
-		}
-		if stat.HasHugetlb {
-			stat.Hugetlb = val.Hugetlb
-		}
-		if stat.HasNetwork {
-			stat.Network.Interfaces = val.Network.Interfaces
-		}
-		if stat.HasProcesses {
-			stat.Processes = val.Processes
-		}
-		if stat.HasFilesystem {
-			stat.Filesystem = val.Filesystem
-		}
-		if stat.HasDiskIo {
-			stat.DiskIo = val.DiskIo
-		}
-		if stat.HasCustomMetrics {
-			stat.CustomMetrics = val.CustomMetrics
-		}
-		if len(val.PerfStats) > 0 {
-			stat.PerfStats = val.PerfStats
-		}
-		if len(val.PerfUncoreStats) > 0 {
-			stat.PerfUncoreStats = val.PerfUncoreStats
-		}
-		if len(val.Resctrl.MemoryBandwidth) > 0 || len(val.Resctrl.Cache) > 0 {
-			stat.Resctrl = val.Resctrl
-		}
-		// TODO(rjnagal): Handle load stats.
-		stats = append(stats, stat)
-	}
-	return stats
 }
 
 func InstCpuStats(last, cur *v1.ContainerStats) (*CpuInstStats, error) {
