@@ -33,7 +33,7 @@ import (
 	"github.com/google/cadvisor/container"
 	"github.com/google/cadvisor/container/raw"
 	"github.com/google/cadvisor/fs"
-	info "github.com/google/cadvisor/info/v1"
+	info "github.com/google/cadvisor/model"
 	v2 "github.com/google/cadvisor/info/v2"
 	"github.com/google/cadvisor/machine"
 	"github.com/google/cadvisor/utils/oomparser"

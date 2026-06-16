@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	v1 "github.com/google/cadvisor/info/v1"
+	v1 "github.com/google/cadvisor/model"
 	v2 "github.com/google/cadvisor/info/v2"
 )
 

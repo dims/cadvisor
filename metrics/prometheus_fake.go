@@ -18,7 +18,7 @@ import (
 	"errors"
 	"time"
 
-	info "github.com/google/cadvisor/info/v1"
+	info "github.com/google/cadvisor/model"
 	v2 "github.com/google/cadvisor/info/v2"
 )
 
