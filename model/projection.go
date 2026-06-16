@@ -95,3 +95,36 @@ func InstCpuStats(last, cur *ContainerStats) (*CpuInstStats, error) {
 		},
 	}, nil
 }
+
+// ProcessInfo describes a process listed by GetProcessList. Folded in from info/v2.
+type ProcessInfo struct {
+	User          string  `json:"user"`
+	Pid           int     `json:"pid"`
+	Ppid          int     `json:"parent_pid"`
+	StartTime     string  `json:"start_time"`
+	PercentCpu    float32 `json:"percent_cpu"`
+	PercentMemory float32 `json:"percent_mem"`
+	RSS           uint64  `json:"rss"`
+	VirtualSize   uint64  `json:"virtual_size"`
+	Status        string  `json:"status"`
+	RunningTime   string  `json:"running_time"`
+	CgroupPath    string  `json:"cgroup_path"`
+	Cmd           string  `json:"cmd"`
+	FdCount       int     `json:"fd_count"`
+	Psr           int     `json:"psr"`
+}
+
+// FilesystemInfo is per-filesystem runtime capacity/usage returned by GetFsInfo.
+// Folded in from info/v2 (named FsInfo there); the name FsInfo is already taken in
+// model by the machine-level filesystem type, so this runtime view is FilesystemInfo.
+type FilesystemInfo struct {
+	Timestamp  time.Time `json:"timestamp"`
+	Device     string    `json:"device"`
+	Mountpoint string    `json:"mountpoint"`
+	Capacity   uint64    `json:"capacity"`
+	Available  uint64    `json:"available"`
+	Usage      uint64    `json:"usage"`
+	Labels     []string  `json:"labels"`
+	Inodes     *uint64   `json:"inodes,omitempty"`
+	InodesFree *uint64   `json:"inodes_free,omitempty"`
+}

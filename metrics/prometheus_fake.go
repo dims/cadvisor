@@ -19,7 +19,6 @@ import (
 	"time"
 
 	info "github.com/google/cadvisor/model"
-	v2 "github.com/google/cadvisor/info/v2"
 )
 
 type testSubcontainersInfoProvider struct{}
@@ -273,7 +272,7 @@ func (p testSubcontainersInfoProvider) GetMachineInfo() (*info.MachineInfo, erro
 	}, nil
 }
 
-func (p testSubcontainersInfoProvider) GetRequestedContainersInfo(string, v2.RequestOptions) (map[string]*info.ContainerInfo, error) {
+func (p testSubcontainersInfoProvider) GetRequestedContainersInfo(string, info.RequestOptions) (map[string]*info.ContainerInfo, error) {
 	return map[string]*info.ContainerInfo{
 		"testcontainer": {
 			ContainerReference: info.ContainerReference{
@@ -842,7 +841,7 @@ func (p *erroringSubcontainersInfoProvider) GetMachineInfo() (*info.MachineInfo,
 }
 
 func (p *erroringSubcontainersInfoProvider) GetRequestedContainersInfo(
-	a string, opt v2.RequestOptions) (map[string]*info.ContainerInfo, error) {
+	a string, opt info.RequestOptions) (map[string]*info.ContainerInfo, error) {
 	if p.shouldFail {
 		return map[string]*info.ContainerInfo{}, errors.New("oops 3")
 	}
