@@ -85,9 +85,7 @@ func (m *manager) addContainer(t *testing.T, name, namespace string) *containerD
 	return cont
 }
 
-// duringAddStats is a storage driver that calls itself from AddStats.
-// InMemoryCache.AddStats calls the drivers after it has stored the container
-// and before it has stored the stats.
+// duringAddStats runs inside AddStats, before the first stats are stored.
 type duringAddStats func()
 
 func (f duringAddStats) AddStats(*info.ContainerInfo, *info.ContainerStats) error {
